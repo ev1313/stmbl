@@ -42,18 +42,25 @@ class GLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 	private:
 		QOpenGLShaderProgram* m_shader;
 
+		//matrix foo
 		QMatrix4x4 m_matrix;
 		QVector3D m_translation;
 		QVector3D m_scalation;
 
-		bool m_translating;
-		bool m_scaling;
+		bool m_translating = false;
+		bool m_scaling = false;
 
 		QPoint m_transpos;
 		QPoint m_scalepos;
 
+		//buffer objects
 		QOpenGLBuffer m_vbo;
 		QOpenGLVertexArrayObject m_vao;
+
+		//important shit
+		std::vector<std::shared_ptr<FunctionGraph>> m_functions;
+
+		bool m_initialized_gl = false;
 
 	protected:
 		void initializeGL() override;
@@ -68,10 +75,9 @@ class GLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 		void updateMatrix();
 
 	public:
-        std::array<FunctionGraph, 2> m_functions;
-
-		explicit GLWidget(QWidget* parent = 0);
+		explicit GLWidget(QWidget* parent);
 		void resetMatrix();
+		void setFunctions(std::vector<std::shared_ptr<FunctionGraph>> functions);
 };
 
 #endif // GLWIDGET_HPP

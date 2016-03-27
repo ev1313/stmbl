@@ -27,15 +27,15 @@ the AUTHORS file.
 
 using namespace std;
 
-#define VBO_SIZE 100
+#define VBO_SIZE 20000
 
-FunctionGraph::FunctionGraph() :
-	m_xpos(0),
-	m_data_mid(0),
-	m_data_size(0),
-    m_filled(false),
-    m_color(0.0f,0.0f,0.0f)
+FunctionGraph::FunctionGraph(std::shared_ptr<FunctionTrigger> trigger) :
+	//data
+	m_data(boost::circular_buffer<GLfloat>(VBO_SIZE)),
+	//other
+	m_color(0.0f,0.0f,0.0f)
 {
+	m_trigger = trigger;
 }
 
 void FunctionGraph::initializeGL()
@@ -46,10 +46,6 @@ void FunctionGraph::initializeGL()
 	m_vbo.create();
 	m_vbo.bind();
 	m_vbo.allocate(VBO_SIZE * 2 * sizeof(GLfloat));
-	QVector<GLfloat> data;
-	data.append(0);
-	data.append(0);
-	m_vbo.write(0, data.constData(), data.count() * sizeof(GLfloat));
 
 	QOpenGLFunctions *f = QOpenGLContext::currentContext()->functions();
 	if(f) {
@@ -66,76 +62,123 @@ void FunctionGraph::initializeGL()
 
 	m_vao.release();
 	m_vbo.release();
+
+	m_initialized = true;
 }
 
-void FunctionGraph::paintGL(QOpenGLShaderProgram* shader)
+void FunctionGraph::paintGL(size_t width, QMatrix4x4 matrix, QOpenGLShaderProgram* shader)
 {
+	if(m_data.size() <= 1)
+		return;
+
 	QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
+	m_vbo.bind();
 
 	QOpenGLFunctions *f = QOpenGLContext::currentContext()->functions();
-    if(f && shader) {
-        if(m_data_size > 0) {
-            shader->setUniformValue("color", m_color);
-			if(!m_filled) {
-				f->glDrawArrays(GL_LINE_STRIP, 0, m_data_size);
-			} else {
-				f->glDrawArrays(GL_LINE_STRIP, 0, m_data_mid);
-				if(m_data_mid < m_data_size)
-					f->glDrawArrays(GL_LINE_STRIP, m_data_mid + 1, m_data_size - m_data_mid - 1);
+	if(f && shader)
+	{
+		shader->setUniformValue("color", m_color);
+
+		std::vector<QPointF> triggerpoints;
+		switch(m_trigger->mode)
+		{
+			case FALLING_TRIGGER:
+			{
+				//seek trigger point
+				for(size_t loop = 1; loop < m_data.size(); loop++)
+					if(m_data[loop] > m_trigger->level)
+						if(m_data[loop - 1] < m_data[loop])
+							triggerpoints.push_back(QPointF(loop, m_data[loop]));
+
+				break;
+			}
+			case RISING_TRIGGER:
+			{
+				//seek trigger point
+				for(size_t loop = 1; loop < m_data.size(); loop++)
+					if(m_data[loop] > m_trigger->level)
+						if(m_data[loop - 1] > m_data[loop])
+							triggerpoints.push_back(QPointF(loop, m_data[loop]));
+
+				break;
+			}
+			case EDGE_TRIGGER:
+			{
+				//seek trigger point
+				for(size_t loop = 1; loop < m_data.size(); loop++)
+					if(m_data[loop] > m_trigger->level)
+						triggerpoints.push_back(QPointF(loop, m_data[loop]));
+
+				break;
+			}
+			default:
+			{
+				//no trigger? render normally
+				f->glDrawArrays(GL_LINE_STRIP, 0, m_data.size());
+
+				break;
 			}
 		}
-    }
+
+		size_t lastx = 0;
+
+		for(size_t pos = 0; pos < triggerpoints.size(); pos++)
+		{
+			if(pos == 0 || triggerpoints[pos].x() > lastx + width)
+			{
+				lastx = triggerpoints[pos].x();
+				//transform matrix to trigger point & trigger translation
+				matrix.translate(lastx,0,0);
+				//render
+				shader->setUniformValue("mvp", matrix);
+
+				f->glDrawArrays(GL_LINE_STRIP, lastx, min(m_data.size() - lastx, width));
+
+				//transform matrix back
+				matrix.translate(-lastx,0,0);
+			}
+		}
+	}
 
 	m_vao.release();
+	m_vbo.release();
 }
 
 void FunctionGraph::addPoint(float y)
 {
 	m_vbo.bind();
 
-	size_t offset = 0;
-	QVector<GLfloat> data;
+	m_data.push_back(y);
 
-	if(!m_filled) {
-		if(m_data_size < VBO_SIZE) {
-			offset = m_data_size * 2;
-			m_data_size++;
-		} else {
-			m_xpos = 0;
-			m_data_mid = 2;
-			m_filled = true;
-			//keep the two front zeros
-			offset = 2;
-		}
-	} else {
-		if(m_data_mid < VBO_SIZE) {
-			offset = m_data_mid * 2;
-			m_data_mid++;
-		} else {
-			m_xpos = 0;
-			m_data_mid = 2;
-			offset = 2;
-		}
+	//yes. I know this *is* indeed awful.
+	//could be fixed with some hacks, e.g. looking,
+	//if the new added in the circular buffer is at the front
+	//and then counting at which position the primitive restart have to be.
+	QVector<GLfloat> data;
+	for(size_t c = 0; c < m_data.size(); c++)
+	{
+		data.push_back(c);
+		data.push_back(m_data[c]);
 	}
 
-	data.append(m_xpos++);
-	data.append(y);
+	m_vbo.write(0, data.constData(), data.size() * sizeof(GLfloat));
 
-	m_vbo.write(offset * sizeof(GLfloat), data.constData(), data.count() * sizeof(GLfloat));
-
-    m_vbo.release();
+	m_vbo.release();
 }
 
 void FunctionGraph::setColor(float r, float g, float b)
 {
-    m_color.setX(r);
-    m_color.setY(g);
-    m_color.setZ(b);
+	m_color.setX(r);
+	m_color.setY(g);
+	m_color.setZ(b);
 }
 
 void FunctionGraph::restart()
 {
-	m_xpos = 0;
-	m_data_size = 0;
-	m_filled = false;
+	m_data.clear();
+}
+
+bool FunctionGraph::isInitialized()
+{
+	return m_initialized;
 }

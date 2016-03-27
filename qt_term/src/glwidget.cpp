@@ -28,27 +28,16 @@ the AUTHORS file.
 #include <QKeyEvent>
 
 static const char *vertexShaderSource =
-				"#version 120\n"
-				"uniform mat4 mvp;\n"
-				"void main(void)\n"
-				"{\n"
-				"    gl_Position = mvp * gl_Vertex;\n"
-				"}\n";
+#include <shader/main.vs>
+;
 
 static const char *fragmentShaderSource =
-                "#version 120\n"
-                "uniform vec3 color;\n"
-				"void main(void)\n"
-				"{\n"
-                "    gl_FragColor = vec4(color, 1.0);\n"
-				"}\n";
+#include <shader/main.fs>
+;
 
 GLWidget::GLWidget(QWidget * parent) :
 		QOpenGLWidget(parent)
 {
-	m_translating = false;
-	m_scaling = false;
-
 	m_translation.setX(0.0f);
 	m_translation.setY(0.0f);
 	m_translation.setZ(-10.0f);
@@ -75,12 +64,23 @@ void GLWidget::resetMatrix()
 	repaint();
 }
 
+void GLWidget::setFunctions(std::vector<std::shared_ptr<FunctionGraph>> functions)
+{
+	if(m_initialized_gl)
+		for(auto &f : functions)
+			if(!f->isInitialized())
+				f->initializeGL();
+
+	m_functions = functions;
+}
+
 void GLWidget::updateMatrix()
 {
 	m_matrix.setToIdentity();
-	m_matrix.ortho(-width()/2, +width()/2, +height()/2, -height()/2, 0.0f, 15.0f);
+	//m_matrix.ortho(-width()/2, +width()/2, +height()/2, -height()/2, 0.0f, 15.0f);
+	m_matrix.ortho(0,width(),-(height()/2),+(height()/2),0.0f,15.0f);
 	QVector3D p(m_scalepos.x() - width()/2, m_scalepos.y() - height()/2, 0.0);
-	
+
 	m_matrix.translate(p);
 	m_matrix.scale(m_scalation.x(), m_scalation.x(), 1.0);
 	m_matrix.translate(-p / m_scalation.x());
@@ -107,11 +107,11 @@ void GLWidget::initializeGL()
 	if(f) {
 		f->glEnableVertexAttribArray(0);
 #ifdef __APPLE__
-        //wat
-        //http://stackoverflow.com/questions/28156524/meaning-of-index-parameter-in-glenablevertexattribarray-and-possibly-a-bug-i
-        f->glEnableVertexAttribArray(1);
+		//wat
+		//http://stackoverflow.com/questions/28156524/meaning-of-index-parameter-in-glenablevertexattribarray-and-possibly-a-bug-i
+		f->glEnableVertexAttribArray(1);
 #endif
-        f->glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+		f->glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 	} else {
 		qWarning("couldn't get function context");
 	}
@@ -120,25 +120,17 @@ void GLWidget::initializeGL()
 
 	data.append(-10000000.0);
 	data.append(0.0);
-	data.append(10000000.0);
-	data.append(0.0);
 
-	data.append(0.0);
-	data.append(-10000000.0);
-	data.append(0.0);
 	data.append(10000000.0);
+	data.append(0.0);
 
 	m_vbo.allocate(data.constData(), data.count() * sizeof(GLfloat));
 
 	m_vao.release();
 	m_vbo.release();
 
-    m_functions[0].setColor(0.0f, 1.0f, 0.0f);
-    m_functions[1].setColor(0.0f, 0.0f, 1.0f);
-
-    for(auto &f : m_functions) {
-        f.initializeGL();
-    }
+	for(auto &f : m_functions)
+		f->initializeGL();
 
 	m_shader = new QOpenGLShaderProgram();
 	m_shader->addShaderFromSourceCode(QOpenGLShader::Vertex, vertexShaderSource);
@@ -149,6 +141,8 @@ void GLWidget::initializeGL()
 	m_shader->setAttributeBuffer("vertex", GL_FLOAT, 0, 2, 0);
 
 	m_shader->release();
+
+	m_initialized_gl = true;
 }
 
 void GLWidget::paintGL()
@@ -166,20 +160,19 @@ void GLWidget::paintGL()
 	m_shader->enableAttributeArray("vertex");
 	m_shader->setAttributeBuffer("vertex", GL_FLOAT, 0, 2, 0);
 
-    for(auto &func : m_functions) {
-        func.paintGL(m_shader);
-    }
-
 	QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
 
-    m_shader->setUniformValue("color", QVector3D(1.0f, 0.0f, 0.0f));
+	m_shader->setUniformValue("color", QVector3D(1.0f, 0.0f, 0.0f));
 
 	QOpenGLFunctions *f = QOpenGLContext::currentContext()->functions();
 	if(f) {
-		f->glDrawArrays(GL_LINES, 0, 4);
+		f->glDrawArrays(GL_LINES, 0, 2);
 	}
 
 	m_vao.release();
+
+	for(auto &func : m_functions)
+		func->paintGL(this->width(), m_matrix, m_shader);
 
 	m_shader->release();
 
@@ -192,8 +185,9 @@ void GLWidget::paintGL()
 
 void GLWidget::resizeGL(int w, int h)
 {
-	int side = qMin(w, h);
-	glViewport((w - side) / 2, (h - side) / 2, side, side);
+	//int side = qMin(w, h);
+	//glViewport((w - side) / 2, (h - side) / 2, side, side);
+	glViewport(0,0,w,h);
 	updateMatrix();
 }
 
@@ -202,9 +196,7 @@ void GLWidget::mousePressEvent(QMouseEvent *event)
 	if(event->buttons() == Qt::LeftButton) {
 		m_translating = true;
 		m_transpos = event->pos();
-		QVector3D p(event->pos().x() - width()/2, event->pos().y() - height()/2, 0.0);
-		qDebug() << event->pos() << " " << p << " " << p / m_scalation;
-		
+
 	}
 	if(event->buttons() == Qt::RightButton) {
 		m_scaling = true;
@@ -214,23 +206,23 @@ void GLWidget::mousePressEvent(QMouseEvent *event)
 
 void GLWidget::wheelEvent(QWheelEvent *event)
 {
-    QPoint numPixels = event->pixelDelta();
-    //QPoint numDegrees = event->angleDelta();
-    //qDebug() << "wh pix " << numPixels << endl << "wh deg" << numDegrees;
-	 
-	 m_scalepos = event->pos();
-	 m_scalation.setX(m_scalation.x() + numPixels.y() / 20.0);
-	 m_scalation.setY(m_scalation.y() + numPixels.y() / 20.0);
-	 
-	 if(m_scalation.x() <= 0.0){
-		 m_scalation.setX(1.0 / 20.0);
-	 }
-	 if(m_scalation.y() <= 0.0){
-		 m_scalation.setY(1.0 / 20.0);
-	 }
-	 
-    event->accept();
-	 
+	QPoint numPixels = event->pixelDelta();
+	//QPoint numDegrees = event->angleDelta();
+	//qDebug() << "wh pix " << numPixels << endl << "wh deg" << numDegrees;
+
+	m_scalepos = event->pos();
+	m_scalation.setX(m_scalation.x() + numPixels.y() / 20.0);
+	m_scalation.setY(m_scalation.y() + numPixels.y() / 20.0);
+
+	if(m_scalation.x() <= 0.0){
+		m_scalation.setX(1.0 / 20.0);
+	}
+	if(m_scalation.y() <= 0.0){
+		m_scalation.setY(1.0 / 20.0);
+	}
+
+	event->accept();
+
 }
 
 void GLWidget::mouseMoveEvent(QMouseEvent *event)
@@ -239,7 +231,6 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event)
 		QPoint pos = m_transpos - event->pos();
 
 		pos.setX(-pos.x());
-		pos.setY(-pos.y());
 
 		m_translation += QVector3D(pos);
 

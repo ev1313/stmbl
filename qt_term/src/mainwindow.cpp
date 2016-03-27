@@ -25,15 +25,27 @@ the AUTHORS file.
 
 MainWindow::MainWindow(QWidget *parent) :
 		QMainWindow(parent),
+		m_trigger(std::make_shared<FunctionTrigger>(DefaultNoTrigger)),
 		m_historypos(0)
 {
 	this->setupUi(this);
 	this->lineEdit->setFocus();
+
+	//setup functions & default trigger
+	m_functions.push_back(std::make_shared<FunctionGraph>(m_trigger));
+	m_functions.push_back(std::make_shared<FunctionGraph>(m_trigger));
+
+	this->openGLWidget->setFunctions(m_functions);
+
+	//setup demo timer
 	timer = new QTimer(this);
 	connect(timer, SIGNAL(timeout()), this, SLOT(pollTimerEvent()));
-	timer->setInterval(50);
+	timer->setInterval(1);
     timer->setTimerType(Qt::PreciseTimer);
-    timer->start();
+	timer->start();
+
+	for(size_t foo = 0; foo < 2000; foo++)
+		this->pollTimerEvent();
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event)
@@ -74,11 +86,11 @@ void MainWindow::on_actionResetMatrix_triggered()
 
 void MainWindow::pollTimerEvent()
 {
-    static int i = 0;
-    this->openGLWidget->m_functions[0].addPoint(20.0*sin(i++/10.0));
-    this->openGLWidget->m_functions[1].addPoint(50.0*sin(i++/10.0));
+	static int i = 0;
+	i++;
+	this->m_functions[0]->addPoint(20.0*sin(i/10.0) * sin(i*i / 10.0));
+	this->m_functions[1]->addPoint(50.0*sin(i/10.0) * sin(i*i / 10.0));
 }
-
 
 void MainWindow::on_actionExit_triggered()
 {

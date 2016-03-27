@@ -36,6 +36,9 @@ class MainWindow : public QMainWindow, private Ui::MainWindow
 		std::vector<std::string> m_history;
 		size_t m_historypos;
 
+		std::vector<std::shared_ptr<FunctionGraph>> m_functions;
+		std::shared_ptr<FunctionTrigger> m_trigger;
+
 		QTimer* timer;
 
 	public:
