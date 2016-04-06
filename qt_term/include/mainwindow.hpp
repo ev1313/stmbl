@@ -19,8 +19,7 @@ For feedback and questions about stmbl please e-mail one of the authors named in
 the AUTHORS file.
 */
 
-#ifndef MAINWINDOW_HPP
-#define MAINWINDOW_HPP
+#pragma once
 
 #include <ui_mainwindow.h>
 #include <QMainWindow>
@@ -54,6 +53,11 @@ class MainWindow : public QMainWindow, private Ui::MainWindow
         void pollTimerEvent();
 	private slots:
 		void on_actionExit_triggered();
+		void on_noneRadioButton_toggled(bool checked);
+		void on_fallingRadioButton_toggled(bool checked);
+		void on_risingRadioButton_toggled(bool checked);
+		void on_bothRadioButton_toggled(bool checked);
+		void on_holdoffSpinBox_valueChanged(int arg1);
+		void on_positionSpinBox_valueChanged(int arg1);
+		void on_levelSpinBox_valueChanged(double arg1);
 };
-
-#endif // MAINWINDOW_HPP

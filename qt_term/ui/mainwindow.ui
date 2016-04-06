@@ -75,53 +75,63 @@ p, li { white-space: pre-wrap; }
       </property>
       <layout class="QFormLayout" name="formLayout_2">
        <item row="0" column="0">
-        <widget class="QLabel" name="label_2">
+        <widget class="QLabel" name="levelLabel">
          <property name="text">
           <string>Level</string>
          </property>
         </widget>
        </item>
        <item row="0" column="1">
-        <widget class="QDoubleSpinBox" name="doubleSpinBox"/>
+        <widget class="QDoubleSpinBox" name="levelSpinBox"/>
        </item>
        <item row="1" column="0">
-        <widget class="QLabel" name="label_3">
+        <widget class="QLabel" name="positionLabel">
          <property name="text">
           <string>Position</string>
          </property>
         </widget>
        </item>
        <item row="1" column="1">
-        <widget class="QSpinBox" name="spinBox"/>
+        <widget class="QSpinBox" name="positionSpinBox"/>
        </item>
        <item row="3" column="0">
-        <widget class="QLabel" name="label_4">
+        <widget class="QLabel" name="holdoffLabel">
          <property name="text">
           <string>Holdoff</string>
          </property>
         </widget>
        </item>
        <item row="3" column="1">
-        <widget class="QSpinBox" name="spinBox_2"/>
+        <widget class="QSpinBox" name="holdoffSpinBox"/>
        </item>
-       <item row="4" column="0">
-        <widget class="QRadioButton" name="radioButton">
+       <item row="5" column="0">
+        <widget class="QRadioButton" name="fallingRadioButton">
          <property name="text">
-          <string>failling</string>
+          <string>falling</string>
          </property>
         </widget>
        </item>
-       <item row="5" column="0">
-        <widget class="QRadioButton" name="radioButton_2">
+       <item row="6" column="0">
+        <widget class="QRadioButton" name="risingRadioButton">
          <property name="text">
           <string>rising</string>
          </property>
         </widget>
        </item>
-       <item row="6" column="0">
-        <widget class="QRadioButton" name="radioButton_3">
+       <item row="7" column="0">
+        <widget class="QRadioButton" name="bothRadioButton">
          <property name="text">
           <string>both</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QRadioButton" name="noneRadioButton">
+         <property name="text">
+          <string>none</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
          </property>
         </widget>
        </item>

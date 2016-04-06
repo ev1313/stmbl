@@ -35,6 +35,9 @@ MainWindow::MainWindow(QWidget *parent) :
 	m_functions.push_back(std::make_shared<FunctionGraph>(m_trigger));
 	m_functions.push_back(std::make_shared<FunctionGraph>(m_trigger));
 
+	m_functions[0]->setColor(0.0f, 1.0f, 0.0f);
+	m_functions[1]->setColor(0.0f, 0.0f, 1.0f);
+
 	this->openGLWidget->setFunctions(m_functions);
 
 	//setup demo timer
@@ -88,11 +91,58 @@ void MainWindow::pollTimerEvent()
 {
 	static int i = 0;
 	i++;
-	this->m_functions[0]->addPoint(20.0*sin(i/10.0) * sin(i*i / 10.0));
-	this->m_functions[1]->addPoint(50.0*sin(i/10.0) * sin(i*i / 10.0));
+	this->m_functions[0]->addPoint(20.0*sin(i/100.0) * tan(i*i / 100.0));
+	this->m_functions[1]->addPoint(50.0*sin(i/100.0) * cos(i*i / 100.0));
 }
 
 void MainWindow::on_actionExit_triggered()
 {
 	this->close();
+}
+
+void MainWindow::on_noneRadioButton_toggled(bool checked)
+{
+	if(checked)
+	{
+		m_trigger->mode = NO_TRIGGER;
+	}
+}
+
+void MainWindow::on_fallingRadioButton_toggled(bool checked)
+{
+   if(checked)
+   {
+	   m_trigger->mode = FALLING_TRIGGER;
+   }
+}
+
+void MainWindow::on_risingRadioButton_toggled(bool checked)
+{
+	if(checked)
+	{
+		m_trigger->mode = RISING_TRIGGER;
+	}
+}
+
+void MainWindow::on_bothRadioButton_toggled(bool checked)
+{
+	if(checked)
+	{
+		m_trigger->mode = EDGE_TRIGGER;
+	}
+}
+
+void MainWindow::on_holdoffSpinBox_valueChanged(int arg1)
+{
+	m_trigger->holdoff = arg1;
+}
+
+void MainWindow::on_positionSpinBox_valueChanged(int arg1)
+{
+	m_trigger->pos = arg1;
+}
+
+void MainWindow::on_levelSpinBox_valueChanged(double arg1)
+{
+	m_trigger->level = arg1;
 }
