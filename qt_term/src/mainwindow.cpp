@@ -91,8 +91,8 @@ void MainWindow::pollTimerEvent()
 {
 	static int i = 0;
 	i++;
-	this->m_functions[0]->addPoint(20.0*sin(i/100.0) * tan(i*i / 100.0));
-	this->m_functions[1]->addPoint(50.0*sin(i/100.0) * cos(i*i / 100.0));
+	this->m_functions[0]->addPoint(2.0*sin(i) * tan(i*i));
+	this->m_functions[1]->addPoint(5.0*sin(i) * cos(i*i));
 }
 
 void MainWindow::on_actionExit_triggered()

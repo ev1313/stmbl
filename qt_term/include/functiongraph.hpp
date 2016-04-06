@@ -48,9 +48,9 @@ struct FunctionTrigger
 
 const struct FunctionTrigger DefaultNoTrigger =
 {
-	FALLING_TRIGGER,
-	20,
-	10.5f,
+	NO_TRIGGER,
+	0,
+	0.0f,
 	0
 };
 
